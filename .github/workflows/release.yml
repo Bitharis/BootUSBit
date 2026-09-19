@@ -2,13 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*.*.*"]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag to create, for example v1.0.0
-        required: true
-        type: string
+    branches: [main]
 
 permissions:
   contents: write
@@ -21,8 +15,30 @@ jobs:
       contents: read
       security-events: write
 
-  publish:
+  release:
     needs: build-test-sbom
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.semantic_release.outputs.new_release_published }}
+      tag: ${{ steps.semantic_release.outputs.new_release_git_tag }}
+      version: ${{ steps.semantic_release.outputs.new_release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create release from Conventional Commits
+        id: semantic_release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          extra_plugins: conventional-changelog-conventionalcommits
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release
+    if: needs.release.outputs.published == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -33,23 +49,13 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Determine version
-        id: version
-        shell: pwsh
-        run: |
-          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
-          if ([string]::IsNullOrWhiteSpace($tag)) { throw "A release tag is required." }
-          $version = $tag -replace '^v', ''
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-          "version=$version" >> $env:GITHUB_OUTPUT
-
       - name: Publish self-contained win-x64 build
         run: >
           dotnet publish src/BootUSBit.Wpf/BootUSBit.Wpf.csproj
           --configuration Release
           --runtime win-x64
           --self-contained true
-          -p:Version=${{ steps.version.outputs.version }}
+          -p:Version=${{ needs.release.outputs.version }}
           --output publish
 
       - name: Download SBOM
@@ -60,12 +66,10 @@ jobs:
 
       - name: Zip release package
         shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ steps.version.outputs.version }}-win-x64.zip
+        run: Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
 
-      - name: Create GitHub release
+      - name: Attach Windows package to GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          files: BootUSBit-${{ steps.version.outputs.version }}-win-x64.zip
-          generate_release_notes: true
-          draft: ${{ github.event_name == 'workflow_dispatch' }}
+          tag_name: ${{ needs.release.outputs.tag }}
+          files: BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
