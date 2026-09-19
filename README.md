@@ -43,8 +43,18 @@ GitHub Actions workflows live in [.github/workflows](.github/workflows):
 - **`release.yml`** — runs the above, then on a `v*.*.*` tag push (or manual dispatch) publishes a
   self-contained `win-x64` build, zips it with its SBOM, and creates a GitHub Release with the zip attached
   so it's directly downloadable from the repo's Releases page.
+- **`conventional-commits.yml`** — lints every commit message and the PR title against Conventional
+  Commits on every pull request; see [Commit message format](#commit-message-format) below.
 
 To cut a release: `git tag v1.0.0 && git push origin v1.0.0`.
+
+## Commit message format
+
+This repo enforces [Conventional Commits](https://www.conventionalcommits.org/) — `<type>(<scope>): <description>`,
+e.g. `feat(core): add Fedora dracut template` or `fix(wpf): handle cancelled builds`. Common types: `feat`,
+`fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, `perf`. `conventional-commits.yml` lints every
+commit message in a PR (via commitlint, config in [commitlint.config.js](commitlint.config.js)) and the PR
+title itself, failing the check if either doesn't conform.
 
 ## Bundled bootloader binaries
 
