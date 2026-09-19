@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test-sbom:
+    uses: ./.github/workflows/build-test-sbom.yml
+    permissions:
+      contents: read
+      security-events: write

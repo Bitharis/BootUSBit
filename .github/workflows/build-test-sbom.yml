@@ -1,0 +1,73 @@
+name: Build, test & SBOM scan
+
+# Reusable workflow: restores/builds/tests the solution, then generates a CycloneDX SBOM and scans it for
+# known vulnerabilities (via NuGet's own advisory database and Grype). Called by ci.yml and release.yml so
+# both pipelines share one implementation instead of duplicating these steps.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  build-test-sbom:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore BootUSBit.sln
+
+      - name: Build
+        run: dotnet build BootUSBit.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/BootUSBit.Tests/BootUSBit.Tests.csproj --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+
+      - name: Check for known-vulnerable NuGet packages
+        run: dotnet list BootUSBit.sln package --vulnerable --include-transitive
+
+      - name: Install CycloneDX SBOM generator
+        run: dotnet tool install --global CycloneDX
+
+      - name: Add .NET global tools to PATH
+        shell: pwsh
+        run: "\"$env:USERPROFILE\\.dotnet\\tools\" | Out-File -FilePath $env:GITHUB_PATH -Append"
+
+      - name: Generate SBOM
+        run: dotnet-CycloneDX BootUSBit.sln --output sbom --output-format json --filename bom.json --exclude-test-projects --recursive --spec-version  1.5
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/bom.json
+          if-no-files-found: error # Explicitly fail here if the file wasn't created
+
+      - name: Scan SBOM for vulnerabilities (Grype)
+        id: scan
+        uses: anchore/scan-action@v7
+        with:
+          sbom: sbom/bom.json
+          fail-build: true
+          severity-cutoff: high
+
+      - name: Upload vulnerability scan results to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}

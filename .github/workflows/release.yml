@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  security-events: write
+
+jobs:
+  build-test-sbom:
+    uses: ./.github/workflows/build-test-sbom.yml
+    permissions:
+      contents: read
+      security-events: write
+
+  publish:
+    needs: build-test-sbom
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          if ([string]::IsNullOrWhiteSpace($version) -or $version -eq $env:GITHUB_REF_NAME) { $version = "0.0.0-dev" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish self-contained win-x64 build
+        run: >
+          dotnet publish src/BootUSBit.Wpf/BootUSBit.Wpf.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:Version=${{ steps.version.outputs.version }}
+          --output publish
+
+      - name: Download SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: publish
+
+      - name: Zip release package
+        shell: pwsh
+        run: Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ steps.version.outputs.version }}-win-x64.zip
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: BootUSBit-${{ steps.version.outputs.version }}-win-x64.zip
+          generate_release_notes: true
+          draft: ${{ github.event_name == 'workflow_dispatch' }}

@@ -1,0 +1,8 @@
+bin/
+obj/
+*.user
+.vs/
+logs/
+
+# Upstream syslinux source tree (large, third-party) — only assets/bootloaders/syslinux/ is actually used
+assets/bootloaders/syslinux-6.03/
