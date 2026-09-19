@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to create, for example v1.0.0
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -32,8 +37,10 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
-          if ([string]::IsNullOrWhiteSpace($version) -or $version -eq $env:GITHUB_REF_NAME) { $version = "0.0.0-dev" }
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          if ([string]::IsNullOrWhiteSpace($tag)) { throw "A release tag is required." }
+          $version = $tag -replace '^v', ''
+          "tag=$tag" >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Publish self-contained win-x64 build
@@ -58,6 +65,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           files: BootUSBit-${{ steps.version.outputs.version }}-win-x64.zip
           generate_release_notes: true
           draft: ${{ github.event_name == 'workflow_dispatch' }}
