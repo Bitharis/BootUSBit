@@ -15,6 +15,7 @@ namespace BootUSBit.Wpf;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly UsbBuilder _usbBuilder;
+    private readonly FileLoggerOptions _fileLoggerOptions;
     private CancellationTokenSource? _buildCts;
 
     public ObservableCollection<UsbDriveInfo> Drives { get; } = [];
@@ -44,10 +45,20 @@ public sealed partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
-        var fileLogger = new FileProgressLogger(AppSettings.LoadFileLoggerOptions());
+        _fileLoggerOptions = AppSettings.LoadFileLoggerOptions();
+        var fileLogger = new FileProgressLogger(_fileLoggerOptions);
         var logger = new CompositeProgressLogger(new UiProgressLogger(AppendLog), fileLogger);
         _usbBuilder = new UsbBuilder(logger: logger);
         Isos.CollectionChanged += (_, _) => BuildCommand.NotifyCanExecuteChanged();
+    }
+
+    public LogLevel MinimumLogLevel => _fileLoggerOptions.MinimumLevel;
+
+    public void SetMinimumLogLevel(LogLevel level)
+    {
+        _fileLoggerOptions.MinimumLevel = level;
+        AppSettings.SaveFileLoggerOptions(_fileLoggerOptions);
+        OnPropertyChanged(nameof(MinimumLogLevel));
     }
 
     [RelayCommand]
