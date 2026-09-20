@@ -5,66 +5,188 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BootUSBit.Wpf"
         mc:Ignorable="d"
-        Title="BootUSBit - Multiboot USB Creator" Height="560" Width="860"
+        Title="BootUSBit - Multiboot USB Creator" Height="780" Width="1280"
+        MinHeight="700" MinWidth="980"
+        WindowState="Maximized"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        Icon="{StaticResource AppLogo}"
+        Background="{StaticResource WindowBrush}"
+        FontFamily="Bahnschrift"
+        Foreground="{StaticResource TextBrush}"
         Loaded="Window_Loaded">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <WindowChrome x:Key="WindowChrome" CaptionHeight="36" ResizeBorderThickness="6" UseAeroCaptionButtons="False" GlassFrameThickness="0" />
     </Window.Resources>
-    <Grid Margin="12">
+    <WindowChrome.WindowChrome>
+        <StaticResource ResourceKey="WindowChrome" />
+    </WindowChrome.WindowChrome>
+    <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="150" />
+            <RowDefinition Height="1.1*" MinHeight="120" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- USB drive selection -->
-        <GroupBox Grid.Row="0" Header="Target USB drive" Padding="8">
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Refresh" Width="90" Margin="8,0,0,0"
-                        Command="{Binding RefreshDrivesCommand}" />
-                <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}"
-                          DisplayMemberPath="Model" MinHeight="28" />
-            </DockPanel>
-        </GroupBox>
+        <Grid Grid.Row="0" Background="{StaticResource ChromeBrush}" Height="36" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                <Image Source="{StaticResource AppLogo}" Width="20" Height="20" Margin="0,0,9,0" />
+                <TextBlock Text="BOOTUSBIT" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="—" Width="44" Height="36" Padding="0" Click="WindowMinimize_Click"
+                    WindowChrome.IsHitTestVisibleInChrome="True" Style="{StaticResource CaptionButton}" />
+                <Button x:Name="MaximizeButton" Content="□" Width="44" Height="36" Padding="0" Click="WindowMaximize_Click"
+                    WindowChrome.IsHitTestVisibleInChrome="True" Style="{StaticResource CaptionButton}" />
+                <Button Content="X" Width="44" Height="36" Padding="0" Click="WindowClose_Click"
+                    WindowChrome.IsHitTestVisibleInChrome="True" Style="{StaticResource CaptionCloseButton}" />
+            </StackPanel>
+        </Grid>
 
-        <!-- ISO list -->
-        <GroupBox Grid.Row="1" Header="ISOs to add (in menu order)" Margin="0,8,0,0" Padding="8">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Width="110" Margin="8,0,0,0">
-                    <Button Content="Add ISO..." Command="{Binding AddIsoCommand}" Margin="0,0,0,6" />
-                    <Button Content="Remove" Command="{Binding RemoveIsoCommand}"
-                            CommandParameter="{Binding SelectedIso}" />
+        <Grid Grid.Row="1" Margin="28,18,28,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" Source="{StaticResource AppLogo}" Width="42" Height="42" Margin="0,0,14,0" />
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Build a bootable USB, your way." FontSize="30" FontWeight="SemiBold" />
+                <TextBlock Text="Compose a multiboot drive from your ISO library or write one image directly."
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="14" Margin="0,5,0,0" />
+            </StackPanel>
+            <Menu Grid.Column="2" VerticalAlignment="Top">
+                <MenuItem Header="_Settings" Background="Transparent" Padding="6,4">
+                    <MenuItem x:Name="LogLevelMenu" Header="Log level">
+                        <MenuItem Header="Trace" Tag="Trace" IsCheckable="True" Click="LogLevel_Click" />
+                        <MenuItem Header="Debug" Tag="Debug" IsCheckable="True" Click="LogLevel_Click" />
+                        <MenuItem Header="Info" Tag="Info" IsCheckable="True" Click="LogLevel_Click" />
+                        <MenuItem Header="Warn" Tag="Warn" IsCheckable="True" Click="LogLevel_Click" />
+                        <MenuItem Header="Error" Tag="Error" IsCheckable="True" Click="LogLevel_Click" />
+                    </MenuItem>
+                <MenuItem Header="Open log folder" Click="OpenLogFolder_Click" />
+                <Separator />
+                <MenuItem Header="About BootUSBit" Click="About_Click" />
+                </MenuItem>
+            </Menu>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="28,0,28,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.1*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="1.9*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="10" Padding="20">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                    <TextBlock Text="TARGET DEVICE" FontSize="12" FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text="Where should we build?" FontSize="20" FontWeight="SemiBold" Margin="0,5,0,18" />
+                    <TextBlock Text="USB drive" Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+                    <DockPanel Margin="0,6,0,0">
+                        <Button DockPanel.Dock="Right" Content="Refresh" Padding="12,8" Margin="10,0,0,0"
+                                Command="{Binding RefreshDrivesCommand}" />
+                        <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </DockPanel>
+                    <Border Background="{StaticResource InputBrush}" BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="7" Padding="12" Margin="0,18,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Wipe warning" Foreground="{StaticResource DangerBrush}" FontWeight="Bold" />
+                            <TextBlock Text="The selected drive will be erased before writing. Check the model and size carefully."
+                                       TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,5,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <CheckBox Content="Write raw ISO image"
+                              IsChecked="{Binding IsRawImageMode}" />
+                    <TextBlock Text="Single ISO only. Replaces the entire drive without a multiboot menu."
+                               TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" FontSize="12"
+                               Margin="24,3,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Grid.Column="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="10" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                        <Button DockPanel.Dock="Right" Content="Add ISO" Style="{StaticResource PrimaryButton}"
+                                Width="250" Padding="18,9" Command="{Binding AddIsoCommand}" />
+                        <StackPanel>
+                            <TextBlock Text="ISO QUEUE" FontSize="12" FontWeight="Bold"
+                                       Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="Boot menu order" FontSize="20" FontWeight="SemiBold" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </DockPanel>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Isos}" SelectedItem="{Binding SelectedIso}"
+                             DisplayMemberPath="DisplayName" Background="{StaticResource InputBrush}"
+                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                             Padding="6" />
+                    <DockPanel Grid.Row="2" Margin="0,12,0,0" LastChildFill="False">
+                        <TextBlock Text="Select an ISO to remove it from the queue."
+                                   Foreground="{StaticResource MutedTextBrush}" VerticalAlignment="Center" FontSize="12" />
+                        <Button DockPanel.Dock="Right" Content="Remove" Style="{StaticResource DangerButton}"
+                                Width="250" Padding="18,9"
+                                Command="{Binding RemoveIsoCommand}"
+                                CommandParameter="{Binding SelectedIso}" />
+                    </DockPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="3" Background="{StaticResource PanelRaisedBrush}" CornerRadius="8"
+                Padding="16" Margin="28,18,28,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" FontSize="14" />
+                    <ProgressBar Height="6" Margin="0,9,0,0" Minimum="0" Maximum="100"
+                                 Value="{Binding BuildProgress, Mode=OneWay}"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </StackPanel>
-                <ListBox ItemsSource="{Binding Isos}" SelectedItem="{Binding SelectedIso}"
-                          DisplayMemberPath="DisplayName" />
+                <TextBlock Grid.Column="1" Text="READY" Foreground="{StaticResource AccentBrush}"
+                           FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Background="#0D0F13" BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="12" Margin="28,0,28,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="ACTIVITY" Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="11" FontWeight="Bold" Margin="0,0,0,7" />
+                <ListBox ItemsSource="{Binding LogLines}" FontFamily="Cascadia Mono" FontSize="11"
+                         Background="Transparent" BorderThickness="0" Foreground="#B8C0CC" />
             </DockPanel>
-        </GroupBox>
+        </Border>
 
-        <!-- Status + progress -->
-        <StackPanel Grid.Row="2" Margin="0,8,0,0">
-            <CheckBox Content="Write raw ISO image (single ISO only, no multiboot menu)"
-                      IsChecked="{Binding IsRawImageMode}" Margin="0,0,0,4" />
-            <TextBlock Text="{Binding StatusText}" FontWeight="Bold" />
-            <ProgressBar Height="14" Margin="0,4,0,0" Minimum="0" Maximum="100"
-                         Value="{Binding BuildProgress, Mode=OneWay}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
-        </StackPanel>
-
-        <!-- Log -->
-        <GroupBox Grid.Row="3" Header="Log" Margin="0,4,0,0" Padding="4">
-            <ListBox ItemsSource="{Binding LogLines}" FontFamily="Consolas" FontSize="11" />
-        </GroupBox>
-
-        <!-- Actions -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Content="Cancel" Width="90" Margin="0,0,8,0"
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="28,18,28,18">
+            <Button Content="Cancel" Style="{StaticResource DangerButton}" Width="100" Margin="0,0,10,0"
                     Command="{Binding CancelBuildCommand}" IsEnabled="{Binding IsBusy}" />
-            <Button Content="Create USB" Width="120" Command="{Binding BuildCommand}" />
+            <Button Content="Create USB" Style="{StaticResource PrimaryButton}" Width="140"
+                    Command="{Binding BuildCommand}" />
         </StackPanel>
     </Grid>
 </Window>

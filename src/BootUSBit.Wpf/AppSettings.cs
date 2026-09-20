@@ -35,6 +35,14 @@ public static class AppSettings
         }
     }
 
+    public static void SaveFileLoggerOptions(FileLoggerOptions options)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var document = new AppSettingsDocument { Logging = options };
+        var json = JsonSerializer.Serialize(document, JsonOptions);
+        File.WriteAllText(path, json + Environment.NewLine);
+    }
+
     private sealed class AppSettingsDocument
     {
         public FileLoggerOptions? Logging { get; set; }
