@@ -3,12 +3,12 @@ using BootUSBit.Core.Isos;
 namespace BootUSBit.Core.Isos.Templates;
 
 /// <summary>
-/// Template for isolinux-based "casper" live ISOs (Ubuntu and most Debian derivatives). Copies the kernel,
-/// initrd and the full ISO (needed for "iso-scan/filename") onto the USB drive.
+/// Template for Ubuntu casper and Debian Live ISOs. Copies the kernel, initrd and the full ISO
+/// (needed for "iso-scan/filename") onto the USB drive.
 /// </summary>
 public sealed class CasperLiveTemplate : IIsoTemplate
 {
-    public string Name => "Ubuntu/Debian live (casper)";
+    public string Name => "Ubuntu/Debian live";
 
     private static readonly string[] IsolinuxConfigCandidates =
     [
@@ -25,9 +25,15 @@ public sealed class CasperLiveTemplate : IIsoTemplate
         ("live/vmlinuz", "live/initrd.img"),
     ];
 
-    public bool CanHandle(string mountedIsoRoot) =>
-        Directory.Exists(Path.Combine(mountedIsoRoot, "casper")) &&
-        IsolinuxConfigCandidates.Any(candidate => File.Exists(Path.Combine(mountedIsoRoot, candidate)));
+    public bool CanHandle(string mountedIsoRoot)
+    {
+        var isCasperLayout = Directory.Exists(Path.Combine(mountedIsoRoot, "casper")) &&
+                             IsolinuxConfigCandidates.Any(candidate => File.Exists(Path.Combine(mountedIsoRoot, candidate)));
+        var isDebianLiveLayout = IsoStaging.FindFirstExisting(mountedIsoRoot,
+            [("live/vmlinuz", "live/initrd.img")]) is not null;
+
+        return isCasperLayout || isDebianLiveLayout;
+    }
 
     public async Task<string> ApplyAsync(
         IsoEntry entry,
@@ -38,7 +44,7 @@ public sealed class CasperLiveTemplate : IIsoTemplate
     {
         var kernelInitrd = IsoStaging.FindFirstExisting(mountedIsoRoot, KernelInitrdCandidates)
             ?? throw new InvalidOperationException(
-                $"'{entry.DisplayName}' looks casper-based but no known kernel/initrd layout was found.");
+                $"'{entry.DisplayName}' looks like a supported live ISO but no known kernel/initrd layout was found.");
 
         var isoDir = IsoStaging.CreateIsoDirectory(usbDriveLetter, slug);
         File.Copy(Path.Combine(mountedIsoRoot, kernelInitrd.Kernel), Path.Combine(isoDir, "vmlinuz"), overwrite: true);

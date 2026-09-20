@@ -15,6 +15,7 @@ namespace BootUSBit.Wpf;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly UsbBuilder _usbBuilder;
+    private readonly IProgressLogger _logger;
     private readonly FileLoggerOptions _fileLoggerOptions;
     private CancellationTokenSource? _buildCts;
 
@@ -47,8 +48,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _fileLoggerOptions = AppSettings.LoadFileLoggerOptions();
         var fileLogger = new FileProgressLogger(_fileLoggerOptions);
-        var logger = new CompositeProgressLogger(new UiProgressLogger(AppendLog), fileLogger);
-        _usbBuilder = new UsbBuilder(logger: logger);
+        _logger = new CompositeProgressLogger(new UiProgressLogger(AppendLog), fileLogger);
+        _usbBuilder = new UsbBuilder(logger: _logger);
         Isos.CollectionChanged += (_, _) => BuildCommand.NotifyCanExecuteChanged();
     }
 
@@ -77,7 +78,14 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.Error(ex.ToString());
             AppendLog($"ERROR: {ex.Message}");
+            StatusText = "Failed. See the activity log for details.";
+            MessageBox.Show(
+                ex.Message,
+                "USB creation failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
         finally
         {
@@ -187,7 +195,16 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CancelBuild() => _buildCts?.Cancel();
 
-    private void AppendLog(string message) => LogLines.Add(message);
+    private void AppendLog(string message)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            LogLines.Add(message);
+            return;
+        }
+
+        Application.Current.Dispatcher.Invoke(() => LogLines.Add(message));
+    }
 
     partial void OnIsBusyChanged(bool value) => BuildCommand.NotifyCanExecuteChanged();
 

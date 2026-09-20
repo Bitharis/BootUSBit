@@ -78,7 +78,20 @@ jobs:
 
       - name: Zip release package
         shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
+        run: |
+          $requiredAssets = @(
+            'publish/assets/bootloaders/manifest.sha256',
+            'publish/assets/bootloaders/syslinux/efi64/bootx64.efi',
+            'publish/assets/bootloaders/syslinux/efi64/ldlinux.e64',
+            'publish/assets/bootloaders/syslinux/syslinux64.exe',
+            'publish/assets/bootloaders/syslinux/mbr.bin'
+          )
+          foreach ($asset in $requiredAssets) {
+            if (-not (Test-Path $asset)) { throw "Required release asset is missing: $asset" }
+          }
+          if (-not (Test-Path 'publish/BootUSBit.Wpf.exe')) { throw 'Single-file executable is missing from publish output.' }
+          if (Get-ChildItem publish -Recurse -File -Include *.dll,*.pdb) { throw 'Release publish contains unexpected DLL/PDB files.' }
+          Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
 
       - name: Attach Windows package to GitHub release
         uses: softprops/action-gh-release@v2

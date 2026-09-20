@@ -19,14 +19,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\..\assets\bootloaders\syslinux\**\*" LinkBase="assets\bootloaders\syslinux" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\assets\bootloaders\manifest.sha256" LinkBase="assets\bootloaders" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\bootloaders\syslinux\**\*" LinkBase="assets\bootloaders\syslinux"
+         CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\bootloaders\manifest.sha256" LinkBase="assets\bootloaders"
+         CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="..\..\assets\bootloaders\syslinux\efi64\bootx64.efi"
+         CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
     <None Remove="appsettings.json" />
-    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
+
+  <ItemGroup>
+    <BootloaderPublishFiles Include="..\..\assets\bootloaders\syslinux\**\*" />
+  </ItemGroup>
+
+  <Target Name="CopyRequiredBootloaderAssetsAfterPublish" AfterTargets="Publish">
+    <Copy SourceFiles="@(BootloaderPublishFiles)"
+          DestinationFiles="@(BootloaderPublishFiles->'$(PublishDir)assets\bootloaders\syslinux\%(RecursiveDir)%(Filename)%(Extension)')"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
 
 </Project>

@@ -40,6 +40,18 @@ public sealed class UsbBuilder
             throw new ArgumentException("At least one ISO must be selected.", nameof(isos));
         }
 
+        const long Fat32MaximumFileSize = 4L * 1024 * 1024 * 1024;
+        foreach (var iso in isos)
+        {
+            var size = new FileInfo(iso.IsoPath).Length;
+            if (size > Fat32MaximumFileSize)
+            {
+                throw new UnsupportedIsoException(
+                    $"'{iso.DisplayName}' is {size / (1024d * 1024 * 1024):F1} GB, which exceeds FAT32's 4 GB per-file limit. " +
+                    "Enable 'Write raw ISO image' mode to write this ISO directly (single ISO only).");
+            }
+        }
+
         var driveLetter = await _diskService.WipeAndPrepareAsync(diskNumber, cancellationToken);
         await _syslinuxInstaller.InstallAsync(driveLetter, diskNumber, cancellationToken);
 

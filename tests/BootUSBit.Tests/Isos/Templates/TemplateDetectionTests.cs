@@ -40,6 +40,24 @@ public class TemplateDetectionTests
     }
 
     [Fact]
+    public void CasperLiveTemplate_CanHandle_TrueForDebianLiveLayout()
+    {
+        var root = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "live"));
+            File.WriteAllText(Path.Combine(root, "live", "vmlinuz"), string.Empty);
+            File.WriteAllText(Path.Combine(root, "live", "initrd.img"), string.Empty);
+
+            Assert.True(new CasperLiveTemplate().CanHandle(root));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void DracutLiveTemplate_CanHandle_TrueForLiveOsLayout()
     {
         var root = Directory.CreateTempSubdirectory().FullName;

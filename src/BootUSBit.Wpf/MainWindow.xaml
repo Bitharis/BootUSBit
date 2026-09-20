@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:BootUSBit.Wpf"
         mc:Ignorable="d"
         Title="BootUSBit - Multiboot USB Creator" Height="780" Width="1280"
-        MinHeight="700" MinWidth="980"
+        MinHeight="600" MinWidth="980"
         WindowState="Maximized"
         WindowStyle="None"
         ResizeMode="CanResize"
@@ -29,10 +29,10 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MinHeight="0" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="1.1*" MinHeight="120" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="110" />
+            <RowDefinition Height="62" />
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" Background="{StaticResource ChromeBrush}" Height="36" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
@@ -182,7 +182,8 @@
             </DockPanel>
         </Border>
 
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="28,18,28,18">
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                Margin="28,0,28,0">
             <Button Content="Cancel" Style="{StaticResource DangerButton}" Width="100" Margin="0,0,10,0"
                     Command="{Binding CancelBuildCommand}" IsEnabled="{Binding IsBusy}" />
             <Button Content="Create USB" Style="{StaticResource PrimaryButton}" Width="140"
