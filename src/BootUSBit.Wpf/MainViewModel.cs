@@ -35,6 +35,9 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isBusy;
 
     [ObservableProperty]
+    private bool _isBuildInProgress;
+
+    [ObservableProperty]
     private string _statusText = "Ready.";
 
     /// <summary>When set, writes a single ISO raw to the whole disk instead of building a multiboot menu.</summary>
@@ -152,6 +155,7 @@ public sealed partial class MainViewModel : ObservableObject
         BuildProgress = 0;
         StatusIndicator = "WORKING";
         _buildCts = new CancellationTokenSource();
+        IsBuildInProgress = true;
         try
         {
             var progress = new Progress<double>(p => BuildProgress = p * 100);
@@ -198,9 +202,10 @@ public sealed partial class MainViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
             _buildCts.Dispose();
             _buildCts = null;
+            IsBusy = false;
+            IsBuildInProgress = false;
         }
     }
 

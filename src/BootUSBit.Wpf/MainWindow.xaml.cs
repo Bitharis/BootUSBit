@@ -1,5 +1,6 @@
 using System.Text;
 using System.IO;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -18,6 +19,8 @@ namespace BootUSBit.Wpf;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private ProgressDialog? _progressDialog;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -31,13 +34,59 @@ public partial class MainWindow : Window
             ApplyWorkAreaBounds();
             UpdateWindowButtons();
         };
+        Closing += MainWindow_Closing;
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel vm)
         {
+            vm.PropertyChanged += ViewModel_PropertyChanged;
             await vm.RefreshDrivesCommand.ExecuteAsync(null);
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MainViewModel.IsBuildInProgress) ||
+            sender is not MainViewModel vm)
+        {
+            return;
+        }
+
+        if (vm.IsBuildInProgress)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (vm.IsBuildInProgress)
+                {
+                    ShowProgressDialog(vm);
+                }
+            });
+        }
+        else
+        {
+            _progressDialog?.Close();
+        }
+    }
+
+    private void ShowProgressDialog(MainViewModel vm)
+    {
+        if (_progressDialog is not null)
+        {
+            return;
+        }
+
+        var dialog = new ProgressDialog
+        {
+            Owner = this,
+            DataContext = vm,
+        };
+        _progressDialog = dialog;
+        dialog.ShowDialog();
+        if (ReferenceEquals(_progressDialog, dialog))
+        {
+            _progressDialog = null;
         }
     }
 
@@ -73,6 +122,11 @@ public partial class MainWindow : Window
     }
 
     private void WindowClose_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        e.Cancel = DataContext is MainViewModel { IsBuildInProgress: true };
+    }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
