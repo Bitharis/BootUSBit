@@ -37,9 +37,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Show release outputs
+        run: |
+          echo "Published: ${{ steps.semantic_release.outputs.new_release_published }}"
+          echo "Tag: ${{ steps.semantic_release.outputs.new_release_git_tag }}"
+          echo "Version: ${{ steps.semantic_release.outputs.new_release_version }}"
+
   publish:
     needs: release
-    if: needs.release.outputs.published == 'true'
+    if: needs.release.outputs.tag != ''
     runs-on: windows-latest
     steps:
       - name: Checkout
