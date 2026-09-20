@@ -46,16 +46,21 @@ public sealed class CasperLiveTemplate : IIsoTemplate
             ?? throw new InvalidOperationException(
                 $"'{entry.DisplayName}' looks like a supported live ISO but no known kernel/initrd layout was found.");
 
+        var isDebianLive = kernelInitrd.Kernel.StartsWith("live/", StringComparison.OrdinalIgnoreCase);
         var isoDir = IsoStaging.CreateIsoDirectory(usbDriveLetter, slug);
         File.Copy(Path.Combine(mountedIsoRoot, kernelInitrd.Kernel), Path.Combine(isoDir, "vmlinuz"), overwrite: true);
         File.Copy(Path.Combine(mountedIsoRoot, kernelInitrd.Initrd), Path.Combine(isoDir, "initrd.img"), overwrite: true);
         await IsoStaging.CopyFullIsoAsync(entry, usbDriveLetter, slug, cancellationToken);
 
+        var bootParameters = isDebianLive
+            ? $"boot=live components findiso=/isos/{slug}.iso quiet splash"
+            : $"boot=casper iso-scan/filename=/isos/{slug}.iso quiet splash ---";
+
         return $"""
             LABEL {slug}
             MENU LABEL {entry.DisplayName}
             KERNEL /isos/{slug}/vmlinuz
-            APPEND initrd=/isos/{slug}/initrd.img boot=casper iso-scan/filename=/isos/{slug}.iso quiet splash ---
+            APPEND initrd=/isos/{slug}/initrd.img {bootParameters}
 
             """;
     }
