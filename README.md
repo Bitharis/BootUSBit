@@ -4,6 +4,11 @@ A YUMI/Ventoy-style multiboot USB creator for Windows: pick one or more ISOs, pi
 formats the drive, installs a bootloader that works on both legacy BIOS and UEFI firmware, and builds a
 boot menu that chains into each ISO.
 
+## License
+
+BootUSBit is licensed under the [MIT License](LICENSE). Third-party dependencies retain their respective
+licenses; the generated `THIRD-PARTY-NOTICES.md` file in release packages lists their license metadata.
+
 ## Requirements
 
 - Windows 10/11
