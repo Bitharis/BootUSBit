@@ -40,14 +40,15 @@ GitHub Actions workflows live in [.github/workflows](.github/workflows):
   with Grype (fails on high/critical vulnerabilities; results are also uploaded to the repo's Code Scanning
   tab).
 - **`ci.yml`** — runs the above on every push/PR to `main`.
-- **`release.yml`** — runs the above on pushes to `main`, uses Conventional Commits to determine whether a
-  release is needed and its next version, then publishes a self-contained `win-x64` build with its SBOM
-  attached to the generated GitHub Release.
+- **`release.yml`** — runs only when manually dispatched from `main` or `beta`, uses Conventional Commits
+  to determine the next version, then publishes a self-contained `win-x64` build with its SBOM attached to
+  the generated GitHub Release. Runs dispatched from `beta` create prereleases.
 - **`conventional-commits.yml`** — lints every commit message and the PR title against Conventional
   Commits on every pull request; see [Commit message format](#commit-message-format) below.
 
-Releases are cut automatically from Conventional Commits merged into `main`: `feat` commits create a minor
-release, `fix` commits create a patch release, and `BREAKING CHANGE` commits create a major release.
+Dispatch the Release workflow manually from `main` to cut a stable release or from `beta` to cut a beta
+prerelease. Every Conventional Commit type creates at least a patch release; `feat` commits create a minor
+release, and `BREAKING CHANGE` commits create a major release.
 
 ## Commit message format
 
