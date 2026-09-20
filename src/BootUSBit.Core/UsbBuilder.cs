@@ -88,7 +88,7 @@ public sealed class UsbBuilder
     /// </summary>
     public async Task WriteRawIsoAsync(int diskNumber, string isoPath, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
-        await _diskService.EnsureUsbDriveAsync(diskNumber, cancellationToken);
+        using var volumeLocks = await _diskService.LockUsbVolumesAsync(diskNumber, cancellationToken);
         _log.Info($"Writing raw ISO image to disk {diskNumber}...");
         await DdModeTemplate.WriteAsync(isoPath, diskNumber, progress, cancellationToken);
         _log.Info("USB drive is ready.");

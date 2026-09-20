@@ -9,6 +9,9 @@ public interface IDiskService
     /// <summary>Throws if <paramref name="diskNumber"/> is not a currently-attached USB drive.</summary>
     Task EnsureUsbDriveAsync(int diskNumber, CancellationToken cancellationToken = default);
 
+    /// <summary>Locks and dismounts mounted USB volumes so raw writes can safely access the physical disk.</summary>
+    Task<IDisposable> LockUsbVolumesAsync(int diskNumber, CancellationToken cancellationToken = default);
+
     /// <summary>Wipes the disk, creates a single active MBR partition and formats it FAT32, returning the assigned drive letter.</summary>
     Task<char> WipeAndPrepareAsync(int diskNumber, CancellationToken cancellationToken = default);
 }

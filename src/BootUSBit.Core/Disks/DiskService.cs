@@ -1,7 +1,10 @@
+using System.ComponentModel;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using BootUSBit.Core.Diagnostics;
 using BootUSBit.Core.Processes;
+using Microsoft.Win32.SafeHandles;
 
 namespace BootUSBit.Core.Disks;
 
@@ -106,6 +109,65 @@ public sealed class DiskService : IDiskService
         }
     }
 
+    public async Task<IDisposable> LockUsbVolumesAsync(int diskNumber, CancellationToken cancellationToken = default)
+    {
+        await EnsureUsbDriveAsync(diskNumber, cancellationToken);
+        var handles = new List<SafeFileHandle>();
+        try
+        {
+            foreach (var driveLetter in FindLogicalDriveLetters(diskNumber))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var volumePath = $@"\\.\{driveLetter}:";
+                var handle = CreateFile(
+                    volumePath,
+                    GenericRead | GenericWrite,
+                    FileShare.ReadWrite,
+                    IntPtr.Zero,
+                    FileMode.Open,
+                    0,
+                    IntPtr.Zero);
+
+                if (handle.IsInvalid)
+                {
+                    var error = Marshal.GetLastWin32Error();
+                    handle.Dispose();
+                    throw new IOException(
+                        $"Could not open {volumePath} to prepare raw image writing: {new Win32Exception(error).Message} (Win32 error {error}).");
+                }
+
+                if (!DeviceIoControl(handle, FsctlLockVolume, IntPtr.Zero, 0, IntPtr.Zero, 0, out _, IntPtr.Zero))
+                {
+                    var error = Marshal.GetLastWin32Error();
+                    handle.Dispose();
+                    throw new IOException(
+                        $"Could not lock {driveLetter}: before raw image writing. Close applications using the USB drive and try again: {new Win32Exception(error).Message} (Win32 error {error}).");
+                }
+
+                if (!DeviceIoControl(handle, FsctlDismountVolume, IntPtr.Zero, 0, IntPtr.Zero, 0, out _, IntPtr.Zero))
+                {
+                    var error = Marshal.GetLastWin32Error();
+                    handle.Dispose();
+                    throw new IOException(
+                        $"Could not dismount {driveLetter}: before raw image writing: {new Win32Exception(error).Message} (Win32 error {error}).");
+                }
+
+                handles.Add(handle);
+            }
+
+            return new VolumeLocks(handles);
+        }
+        catch
+        {
+            foreach (var handle in handles)
+            {
+                handle.Dispose();
+            }
+
+            throw;
+        }
+    }
+
     private static async Task<char?> FindDriveLetterForDiskAsync(int diskNumber, CancellationToken cancellationToken)
     {
         // Formatting can take a moment to surface a drive letter via WMI; poll briefly.
@@ -141,6 +203,20 @@ public sealed class DiskService : IDiskService
 
     private static (string VolumeLabel, char DriveLetter)? FindLogicalDisk(int diskNumber)
     {
+        var driveLetter = FindLogicalDriveLetters(diskNumber).FirstOrDefault();
+        if (driveLetter == default)
+        {
+            return null;
+        }
+
+        using var searcher = new ManagementObjectSearcher($"SELECT VolumeName FROM Win32_LogicalDisk WHERE DeviceID='{driveLetter}:'");
+        using var logicalDisk = searcher.Get().Cast<ManagementBaseObject>().FirstOrDefault();
+        return ((string?)logicalDisk?["VolumeName"] ?? string.Empty, driveLetter);
+    }
+
+    private static IReadOnlyList<char> FindLogicalDriveLetters(int diskNumber)
+    {
+        var driveLetters = new List<char>();
         using var searcher = new ManagementObjectSearcher(
             $"ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='\\\\.\\PHYSICALDRIVE{diskNumber}'}} " +
             "WHERE AssocClass = Win32_DiskDriveToDiskPartition");
@@ -156,12 +232,49 @@ public sealed class DiskService : IDiskService
                 var deviceId = (string?)logicalDisk["DeviceID"];
                 if (!string.IsNullOrEmpty(deviceId) && deviceId.Length >= 2 && deviceId[1] == ':')
                 {
-                    return ((string?)logicalDisk["VolumeName"] ?? string.Empty, char.ToUpperInvariant(deviceId[0]));
+                    driveLetters.Add(char.ToUpperInvariant(deviceId[0]));
                 }
             }
         }
 
-        return null;
+        return driveLetters;
+    }
+
+    private const uint GenericRead = 0x80000000;
+    private const uint GenericWrite = 0x40000000;
+    private const uint FsctlLockVolume = 0x00090018;
+    private const uint FsctlDismountVolume = 0x00090020;
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFile(
+        string fileName,
+        uint desiredAccess,
+        FileShare shareMode,
+        IntPtr securityAttributes,
+        FileMode creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool DeviceIoControl(
+        SafeFileHandle device,
+        uint controlCode,
+        IntPtr inputBuffer,
+        uint inputBufferSize,
+        IntPtr outputBuffer,
+        uint outputBufferSize,
+        out uint bytesReturned,
+        IntPtr overlapped);
+
+    private sealed class VolumeLocks(List<SafeFileHandle> handles) : IDisposable
+    {
+        public void Dispose()
+        {
+            foreach (var handle in handles)
+            {
+                handle.Dispose();
+            }
+        }
     }
 
     private static int? ParseDiskNumber(string deviceId)
