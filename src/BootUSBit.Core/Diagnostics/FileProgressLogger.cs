@@ -10,6 +10,18 @@ public sealed class FileProgressLogger : IProgressLogger
     private readonly FileLoggerOptions _options;
     private readonly string _fullPath;
 
+    public LogLevel MinimumLevel
+    {
+        get => _options.MinimumLevel;
+        set => _options.MinimumLevel = value;
+    }
+
+    public string FilePath => _options.FilePath;
+
+    public long MaxFileSizeBytes => _options.MaxFileSizeBytes;
+
+    public int RetainedFileCount => _options.RetainedFileCount;
+
     public FileProgressLogger(FileLoggerOptions options)
     {
         _options = options;
@@ -26,7 +38,7 @@ public sealed class FileProgressLogger : IProgressLogger
 
     public void Log(LogLevel level, string message)
     {
-        if (level < _options.MinimumLevel)
+        if (level < MinimumLevel)
         {
             return;
         }

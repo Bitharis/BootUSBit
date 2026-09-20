@@ -15,6 +15,8 @@ namespace BootUSBit.Wpf;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly UsbBuilder _usbBuilder;
+    private readonly FileProgressLogger _fileLogger;
+    private readonly UiProgressLogger _uiLogger;
     private CancellationTokenSource? _buildCts;
 
     public ObservableCollection<UsbDriveInfo> Drives { get; } = [];
@@ -44,10 +46,26 @@ public sealed partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
-        var fileLogger = new FileProgressLogger(AppSettings.LoadFileLoggerOptions());
-        var logger = new CompositeProgressLogger(new UiProgressLogger(AppendLog), fileLogger);
+        _fileLogger = new FileProgressLogger(AppSettings.LoadFileLoggerOptions());
+        _uiLogger = new UiProgressLogger(AppendLog) { MinimumLevel = _fileLogger.MinimumLevel };
+        var logger = new CompositeProgressLogger(_uiLogger, _fileLogger);
         _usbBuilder = new UsbBuilder(logger: logger);
         Isos.CollectionChanged += (_, _) => BuildCommand.NotifyCanExecuteChanged();
+    }
+
+    public LogLevel MinimumLogLevel => _fileLogger.MinimumLevel;
+
+    public void SetMinimumLogLevel(LogLevel level)
+    {
+        _fileLogger.MinimumLevel = level;
+        _uiLogger.MinimumLevel = level;
+        AppSettings.SaveFileLoggerOptions(new FileLoggerOptions
+        {
+            MinimumLevel = level,
+            FilePath = _fileLogger.FilePath,
+            MaxFileSizeBytes = _fileLogger.MaxFileSizeBytes,
+            RetainedFileCount = _fileLogger.RetainedFileCount,
+        });
     }
 
     [RelayCommand]
