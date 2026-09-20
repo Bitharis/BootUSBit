@@ -56,6 +56,8 @@ jobs:
           --configuration Release
           --runtime win-x64
           --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
           -p:Version=${{ needs.release.outputs.version }}
           --output publish
 
