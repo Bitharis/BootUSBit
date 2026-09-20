@@ -59,6 +59,23 @@ jobs:
           -p:Version=${{ needs.release.outputs.version }}
           --output publish
 
+      - name: Sign executable
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64)) {
+            Write-Warning "No Windows signing certificate configured; the release will show as an unknown publisher."
+            exit 0
+          }
+
+          $certificatePath = Join-Path $env:RUNNER_TEMP "bootusbit-signing.pfx"
+          [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+          $executable = Join-Path $PWD "publish\BootUSBit.Wpf.exe"
+          & signtool sign /fd SHA256 /f $certificatePath /p $env:WINDOWS_SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $executable
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed with exit code $LASTEXITCODE." }
+
       - name: Download SBOM
         uses: actions/download-artifact@v4
         with:

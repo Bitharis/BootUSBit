@@ -54,7 +54,7 @@ release, `fix` commits create a patch release, and `BREAKING CHANGE` commits cre
 This repo enforces [Conventional Commits](https://www.conventionalcommits.org/) — `<type>(<scope>): <description>`,
 e.g. `feat(core): add Fedora dracut template` or `fix(wpf): handle cancelled builds`. Common types: `feat`,
 `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, `perf`. `conventional-commits.yml` lints every
-commit message in a PR (via commitlint, config in [commitlint.config.js](commitlint.config.js)) and the PR
+commit message in a PR (via commitlint, config in [commitlint.config.cjs](commitlint.config.cjs)) and the PR
 title itself, failing the check if either doesn't conform.
 
 ## Bundled bootloader binaries

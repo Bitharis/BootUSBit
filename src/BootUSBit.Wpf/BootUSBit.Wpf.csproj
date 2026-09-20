@@ -11,9 +11,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
+    <Resource Include="app.ico" />
     <Content Include="..\..\assets\bootloaders\syslinux\**\*" LinkBase="assets\bootloaders\syslinux" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\assets\bootloaders\manifest.sha256" LinkBase="assets\bootloaders" CopyToOutputDirectory="PreserveNewest" />
     <None Remove="appsettings.json" />

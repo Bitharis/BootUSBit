@@ -5,7 +5,13 @@ public sealed record UsbDriveInfo(
     int DiskNumber,
     string Model,
     ulong SizeBytes,
-    string PnpDeviceId)
+    string PnpDeviceId,
+    char? DriveLetter,
+    string VolumeLabel)
 {
     public double SizeGigabytes => SizeBytes / 1_000_000_000d;
+
+    public string DisplayName =>
+        $"{(DriveLetter is null ? "No drive letter" : $"{DriveLetter}:")} - " +
+        $"{(string.IsNullOrWhiteSpace(VolumeLabel) ? "Unlabeled" : VolumeLabel)} - {Model} ({SizeGigabytes:F1} GB)";
 }

@@ -8,6 +8,8 @@ public sealed class UiProgressLogger : IProgressLogger
 {
     private readonly Action<string> _append;
 
+    public LogLevel MinimumLevel { get; set; } = LogLevel.Info;
+
     public UiProgressLogger(Action<string> append)
     {
         _append = append;
@@ -15,7 +17,7 @@ public sealed class UiProgressLogger : IProgressLogger
 
     public void Log(LogLevel level, string message)
     {
-        if (level < LogLevel.Info)
+        if (level < MinimumLevel)
         {
             return;
         }

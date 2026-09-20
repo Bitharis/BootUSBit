@@ -35,11 +35,14 @@ public sealed class DiskService : IDiskService
             }
 
             var size = disk["Size"] is null ? 0UL : Convert.ToUInt64(disk["Size"]);
+            var volume = FindVolumeForDisk(diskNumber.Value);
             drives.Add(new UsbDriveInfo(
                 diskNumber.Value,
                 (string?)disk["Model"] ?? "Unknown USB drive",
                 size,
-                (string?)disk["PNPDeviceID"] ?? string.Empty));
+                (string?)disk["PNPDeviceID"] ?? string.Empty,
+                volume.DriveLetter,
+                volume.VolumeLabel));
         }
 
         return Task.FromResult<IReadOnlyList<UsbDriveInfo>>(drives);
@@ -134,6 +137,31 @@ public sealed class DiskService : IDiskService
         }
 
         return null;
+    }
+
+    private static (char? DriveLetter, string VolumeLabel) FindVolumeForDisk(int diskNumber)
+    {
+        using var searcher = new ManagementObjectSearcher(
+            $"ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='\\\\.\\PHYSICALDRIVE{diskNumber}'}} " +
+            "WHERE AssocClass = Win32_DiskDriveToDiskPartition");
+
+        foreach (ManagementBaseObject partition in searcher.Get())
+        {
+            using var logicalSearcher = new ManagementObjectSearcher(
+                $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} " +
+                "WHERE AssocClass = Win32_LogicalDiskToPartition");
+
+            foreach (ManagementBaseObject logicalDisk in logicalSearcher.Get())
+            {
+                var deviceId = (string?)logicalDisk["DeviceID"];
+                if (!string.IsNullOrEmpty(deviceId) && deviceId.Length >= 2 && deviceId[1] == ':')
+                {
+                    return (char.ToUpperInvariant(deviceId[0]), (string?)logicalDisk["VolumeName"] ?? string.Empty);
+                }
+            }
+        }
+
+        return (null, string.Empty);
     }
 
     private static int? ParseDiskNumber(string deviceId)

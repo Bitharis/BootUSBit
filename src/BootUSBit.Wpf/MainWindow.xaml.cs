@@ -28,4 +28,18 @@ public partial class MainWindow : Window
             await vm.RefreshDrivesCommand.ExecuteAsync(null);
         }
     }
+
+    private void LoggingSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+        {
+            return;
+        }
+
+        var dialog = new SettingsWindow(vm.MinimumLogLevel) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.SelectedLogLevel is { } level)
+        {
+            vm.SetMinimumLogLevel(level);
+        }
+    }
 }

@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:BootUSBit.Wpf"
         mc:Ignorable="d"
         Title="BootUSBit - Multiboot USB Creator" Height="560" Width="860"
+        Icon="app.ico"
         Loaded="Window_Loaded">
     <Window.DataContext>
         <local:MainViewModel />
@@ -13,6 +14,12 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     </Window.Resources>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="Settings">
+                <MenuItem Header="Logging..." Click="LoggingSettings_Click" />
+            </MenuItem>
+        </Menu>
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -29,7 +36,7 @@
                 <Button DockPanel.Dock="Right" Content="Refresh" Width="90" Margin="8,0,0,0"
                         Command="{Binding RefreshDrivesCommand}" />
                 <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}"
-                          DisplayMemberPath="Model" MinHeight="28" />
+                      DisplayMemberPath="DisplayName" MinHeight="28" />
             </DockPanel>
         </GroupBox>
 
@@ -67,4 +74,5 @@
             <Button Content="Create USB" Width="120" Command="{Binding BuildCommand}" />
         </StackPanel>
     </Grid>
+    </DockPanel>
 </Window>

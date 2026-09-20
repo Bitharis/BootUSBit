@@ -22,6 +22,8 @@ jobs:
 
       - name: Lint commit messages
         uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: commitlint.config.cjs
 
   pr-title:
     runs-on: ubuntu-latest
