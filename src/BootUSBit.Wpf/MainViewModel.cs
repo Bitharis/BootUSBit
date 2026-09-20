@@ -15,6 +15,7 @@ namespace BootUSBit.Wpf;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly UsbBuilder _usbBuilder;
+    private readonly IProgressLogger _logger;
     private readonly FileLoggerOptions _fileLoggerOptions;
     private CancellationTokenSource? _buildCts;
 
@@ -47,8 +48,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _fileLoggerOptions = AppSettings.LoadFileLoggerOptions();
         var fileLogger = new FileProgressLogger(_fileLoggerOptions);
-        var logger = new CompositeProgressLogger(new UiProgressLogger(AppendLog), fileLogger);
-        _usbBuilder = new UsbBuilder(logger: logger);
+        _logger = new CompositeProgressLogger(new UiProgressLogger(AppendLog), fileLogger);
+        _usbBuilder = new UsbBuilder(logger: _logger);
         Isos.CollectionChanged += (_, _) => BuildCommand.NotifyCanExecuteChanged();
     }
 
@@ -67,17 +68,26 @@ public sealed partial class MainViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var drives = await _usbBuilder.GetUsbDrivesAsync();
+            var drives = await Task.Run(() => _usbBuilder.GetUsbDrivesAsync());
             Drives.Clear();
             foreach (var drive in drives)
             {
                 Drives.Add(drive);
             }
             StatusText = $"Found {Drives.Count} USB drive(s).";
+            StatusIndicator = "READY";
         }
         catch (Exception ex)
         {
-            AppendLog($"ERROR: {ex.Message}");
+            _logger.Error(ex.ToString());
+            _logger.Error($"Drive refresh failed: {ex}");
+            StatusText = "Failed. See the activity log for details.";
+            StatusIndicator = "FAILED";
+            MessageBox.Show(
+                ex.Message,
+                "USB creation failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
         finally
         {
@@ -140,31 +150,40 @@ public sealed partial class MainViewModel : ObservableObject
 
         IsBusy = true;
         BuildProgress = 0;
+        StatusIndicator = "WORKING";
         _buildCts = new CancellationTokenSource();
         try
         {
+            var progress = new Progress<double>(p => BuildProgress = p * 100);
             if (IsRawImageMode)
             {
                 StatusText = "Writing raw ISO image...";
-                var progress = new Progress<double>(p => BuildProgress = p * 100);
-                await _usbBuilder.WriteRawIsoAsync(SelectedDrive.DiskNumber, Isos[0].IsoPath, progress, _buildCts.Token);
+                await Task.Run(
+                    () => _usbBuilder.WriteRawIsoAsync(SelectedDrive.DiskNumber, Isos[0].IsoPath, progress, _buildCts.Token));
             }
             else
             {
                 StatusText = "Building multiboot USB drive...";
-                await _usbBuilder.BuildAsync(SelectedDrive.DiskNumber, [.. Isos], _buildCts.Token);
+                await Task.Run(
+                    () => _usbBuilder.BuildAsync(SelectedDrive.DiskNumber, [.. Isos], progress, _buildCts.Token));
             }
 
-            StatusText = "Done.";
+            BuildProgress = 100;
+            StatusText = "Completed successfully.";
+            StatusIndicator = "SUCCESS";
+            _logger.Info("USB creation completed successfully.");
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Cancelled.";
+            StatusText = "Creation cancelled.";
+            StatusIndicator = "CANCELLED";
+            _logger.Warn("USB creation was cancelled.");
         }
         catch (UnsupportedIsoException ex)
         {
-            AppendLog($"ERROR: {ex.Message}");
+            _logger.Error(ex.ToString());
             StatusText = "Failed: unsupported ISO.";
+            StatusIndicator = "FAILED";
             MessageBox.Show(
                 $"{ex.Message}\n\nTip: enable 'Write raw ISO image' mode to write just this ISO directly (single ISO, no multiboot menu).",
                 "Unsupported ISO",
@@ -173,8 +192,9 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            AppendLog($"ERROR: {ex.Message}");
-            StatusText = "Failed.";
+            _logger.Error(ex.ToString());
+            StatusText = "Creation failed. See the activity log.";
+            StatusIndicator = "FAILED";
         }
         finally
         {
@@ -187,7 +207,19 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CancelBuild() => _buildCts?.Cancel();
 
-    private void AppendLog(string message) => LogLines.Add(message);
+    private void AppendLog(string message)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            LogLines.Add(message);
+            return;
+        }
+
+        Application.Current.Dispatcher.Invoke(() => LogLines.Add(message));
+    }
+
+    [ObservableProperty]
+    private string _statusIndicator = "READY";
 
     partial void OnIsBusyChanged(bool value) => BuildCommand.NotifyCanExecuteChanged();
 

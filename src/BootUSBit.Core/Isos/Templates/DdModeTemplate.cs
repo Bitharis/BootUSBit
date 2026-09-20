@@ -1,4 +1,7 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using Microsoft.Win32.SafeHandles;
 
 namespace BootUSBit.Core.Isos.Templates;
 
@@ -15,18 +18,47 @@ public static class DdModeTemplate
         var physicalDrivePath = $@"\\.\PHYSICALDRIVE{diskNumber}";
 
         await using var source = File.OpenRead(isoPath);
-        await using var dest = new FileStream(physicalDrivePath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
+        using var handle = CreateFile(
+            physicalDrivePath,
+            GenericWrite,
+            FileShare.ReadWrite,
+            IntPtr.Zero,
+            FileMode.Open,
+            0,
+            IntPtr.Zero);
+
+        if (handle.IsInvalid)
+        {
+            var error = Marshal.GetLastWin32Error();
+            throw new IOException(
+                $"Could not open {physicalDrivePath} for raw image writing: {new Win32Exception(error).Message} (Win32 error {error}).");
+        }
+
+        using var dest = new FileStream(handle, FileAccess.Write, 4 * 1024 * 1024, isAsync: false);
 
         var buffer = new byte[4 * 1024 * 1024];
         long totalWritten = 0;
         int read;
         while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
         {
-            await dest.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            dest.Write(buffer, 0, read);
             totalWritten += read;
             progress?.Report((double)totalWritten / source.Length);
         }
 
-        await dest.FlushAsync(cancellationToken);
+        dest.Flush(flushToDisk: true);
     }
+
+    private const uint GenericWrite = 0x40000000;
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFile(
+        string fileName,
+        uint desiredAccess,
+        FileShare shareMode,
+        IntPtr securityAttributes,
+        FileMode creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
 }

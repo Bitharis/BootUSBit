@@ -21,6 +21,6 @@ public sealed class UiProgressLogger : IProgressLogger
         }
 
         var line = level >= LogLevel.Warn ? $"{level.ToString().ToUpperInvariant()}: {message}" : message;
-        Application.Current.Dispatcher.Invoke(() => _append(line));
+        _ = Application.Current.Dispatcher.BeginInvoke(() => _append(line));
     }
 }

@@ -21,7 +21,16 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        SourceInitialized += (_, _) => UpdateWindowButtons();
+        SourceInitialized += (_, _) =>
+        {
+            ApplyWorkAreaBounds();
+            UpdateWindowButtons();
+        };
+        StateChanged += (_, _) =>
+        {
+            ApplyWorkAreaBounds();
+            UpdateWindowButtons();
+        };
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -83,6 +92,13 @@ public partial class MainWindow : Window
     {
         MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "□";
         UpdateLogLevelChecks();
+    }
+
+    private void ApplyWorkAreaBounds()
+    {
+        var workArea = SystemParameters.WorkArea;
+        MaxWidth = workArea.Width;
+        MaxHeight = workArea.Height;
     }
 
     private void UpdateLogLevelChecks()
