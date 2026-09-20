@@ -13,7 +13,7 @@ namespace BootUSBit.Core.Boot;
 public sealed class SyslinuxInstaller
 {
     private const string DefaultConfigHeader = """
-        UI vesamenu.c32
+        UI menu.c32
         PROMPT 0
         TIMEOUT 300
         DEFAULT menu
@@ -21,7 +21,7 @@ public sealed class SyslinuxInstaller
 
         LABEL menu
         MENU LABEL Boot menu
-        KERNEL vesamenu.c32
+        KERNEL menu.c32
         APPEND syslinux.cfg
 
         """;
@@ -74,10 +74,10 @@ public sealed class SyslinuxInstaller
         await WriteMbrAsync(diskNumber, cancellationToken);
 
         _log.Info("Staging UEFI boot files (\\EFI\\BOOT)...");
-        InstallUefiBootFiles(driveLetter);
+        InstallUefiBootFiles(driveLetter, configPath);
     }
 
-    private static void InstallUefiBootFiles(char driveLetter)
+    private static void InstallUefiBootFiles(char driveLetter, string configPath)
     {
         var efiBootDir = Path.Combine($"{driveLetter}:\\", "EFI", "BOOT");
         Directory.CreateDirectory(efiBootDir);
@@ -85,6 +85,7 @@ public sealed class SyslinuxInstaller
         File.Copy(BootloaderAssets.Efi64BootApp, Path.Combine(efiBootDir, "BOOTX64.EFI"), overwrite: true);
         File.Copy(BootloaderAssets.Efi64Ldlinux, Path.Combine(efiBootDir, "ldlinux.e64"), overwrite: true);
         CopyModules(BootloaderAssets.Efi64ModulesDir, efiBootDir);
+        File.Copy(configPath, Path.Combine(efiBootDir, "syslinux.cfg"), overwrite: true);
     }
 
     private static void CopyModules(string sourceDir, string destinationDir)

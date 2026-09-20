@@ -40,6 +40,13 @@ public sealed partial class IsoTemplateEngine
 
             var configPath = Path.Combine($"{usbDriveLetter}:\\", "syslinux", "syslinux.cfg");
             await File.AppendAllTextAsync(configPath, menuBlock, cancellationToken);
+
+            var efiConfigPath = Path.Combine($"{usbDriveLetter}:\\", "EFI", "BOOT", "syslinux.cfg");
+            if (File.Exists(efiConfigPath))
+            {
+                await File.AppendAllTextAsync(efiConfigPath, menuBlock, cancellationToken);
+            }
+
             _log.Info($"Added '{entry.DisplayName}' to the boot menu.");
         }
         finally
