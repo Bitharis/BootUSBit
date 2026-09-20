@@ -42,7 +42,7 @@ GitHub Actions workflows live in [.github/workflows](.github/workflows):
 - **`ci.yml`** — runs the above on every push/PR to `main`.
 - **`release.yml`** — runs the above on pushes to `main`, uses Conventional Commits to determine whether a
   release is needed and its next version, then publishes a self-contained `win-x64` build with its SBOM
-  attached to the generated GitHub Release.
+  and third-party license notices attached to the generated GitHub Release.
 - **`conventional-commits.yml`** — lints every commit message and the PR title against Conventional
   Commits on every pull request; see [Commit message format](#commit-message-format) below.
 

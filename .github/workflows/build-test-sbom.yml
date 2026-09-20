@@ -51,11 +51,43 @@ jobs:
       - name: Generate SBOM
         run: dotnet-CycloneDX BootUSBit.sln --output sbom --output-format json --filename bom.json --exclude-test-projects --recursive --spec-version  1.5
 
+      - name: Generate third-party license notices
+        shell: pwsh
+        run: |
+          $bom = Get-Content sbom/bom.json -Raw | ConvertFrom-Json
+          $lines = [System.Collections.Generic.List[string]]::new()
+          $lines.Add('# Third-Party License Notices')
+          $lines.Add('')
+          $lines.Add('This file lists production NuGet dependencies used by BootUSBit. Test-project dependencies are excluded.')
+          $lines.Add('')
+
+          foreach ($component in @($bom.components | Sort-Object name, version)) {
+            $lines.Add("## $($component.name) $($component.version)")
+            $licenseNames = [System.Collections.Generic.List[string]]::new()
+            $licenseUrls = [System.Collections.Generic.List[string]]::new()
+
+            foreach ($licenseEntry in @($component.licenses)) {
+              $license = $licenseEntry.license
+              if ($null -ne $license) {
+                if (-not [string]::IsNullOrWhiteSpace($license.id)) { $licenseNames.Add($license.id) }
+                elseif (-not [string]::IsNullOrWhiteSpace($license.name)) { $licenseNames.Add($license.name) }
+                if (-not [string]::IsNullOrWhiteSpace($license.url)) { $licenseUrls.Add($license.url) }
+              }
+            }
+
+            if ($licenseNames.Count -eq 0) { $licenseNames.Add('License not declared in package metadata') }
+            $lines.Add("- License: $($licenseNames -join ', ')")
+            foreach ($url in $licenseUrls | Select-Object -Unique) { $lines.Add("- License URL: $url") }
+            $lines.Add('')
+          }
+
+          $lines | Set-Content sbom/THIRD-PARTY-NOTICES.md -Encoding utf8
+
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom
-          path: sbom/bom.json
+          path: sbom/*
           if-no-files-found: error # Explicitly fail here if the file wasn't created
 
       - name: Scan SBOM for vulnerabilities (Grype)

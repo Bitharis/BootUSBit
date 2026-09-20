@@ -71,8 +71,11 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
 
-      - name: Attach Windows package to GitHub release
+      - name: Attach package and dependency metadata to GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
-          files: BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
+          files: |
+            BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
+            publish/bom.json
+            publish/THIRD-PARTY-NOTICES.md
