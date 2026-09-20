@@ -34,7 +34,7 @@ public static class DdModeTemplate
                 $"Could not open {physicalDrivePath} for raw image writing: {new Win32Exception(error).Message} (Win32 error {error}).");
         }
 
-            using var dest = new FileStream(handle, FileAccess.ReadWrite, 4 * 1024 * 1024, isAsync: false);
+        using var dest = new FileStream(handle, FileAccess.ReadWrite, 4 * 1024 * 1024, isAsync: false);
 
         var buffer = new byte[4 * 1024 * 1024];
         long totalWritten = 0;
