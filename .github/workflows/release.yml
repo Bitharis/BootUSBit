@@ -88,7 +88,7 @@ jobs:
           foreach ($asset in $requiredAssets) {
             if (-not (Test-Path $asset)) { throw "Required release asset is missing: $asset" }
           }
-          if (-not (Test-Path 'publish/BootUSBit.Wpf.exe')) { throw 'Single-file executable is missing from publish output.' }
+          if (-not (Test-Path 'publish/BootUSBit.exe')) { throw 'Single-file executable is missing from publish output.' }
           if (Get-ChildItem publish -Recurse -File -Include *.dll,*.pdb) { throw 'Release publish contains unexpected DLL/PDB files.' }
           Compress-Archive -Path publish/* -DestinationPath BootUSBit-${{ needs.release.outputs.version }}-win-x64.zip
 
