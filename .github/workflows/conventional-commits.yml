@@ -12,6 +12,26 @@ permissions:
   pull-requests: write
 
 jobs:
+  pull-request-target:
+    name: Enforce beta promotion path
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate pull request target
+        env:
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ "$BASE_BRANCH" = "beta" ]; then
+            exit 0
+          fi
+
+          if [ "$BASE_BRANCH" = "main" ] && [ "$HEAD_BRANCH" = "beta" ]; then
+            exit 0
+          fi
+
+          echo "Pull requests must target beta. Only the beta branch may be merged into main."
+          exit 1
+
   commit-messages:
     runs-on: ubuntu-latest
     steps:
