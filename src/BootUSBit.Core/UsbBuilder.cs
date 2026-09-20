@@ -32,8 +32,18 @@ public sealed class UsbBuilder
     public Task<IReadOnlyList<UsbDriveInfo>> GetUsbDrivesAsync(CancellationToken cancellationToken = default) =>
         _diskService.GetUsbDrivesAsync(cancellationToken);
 
+    public Task BuildAsync(
+        int diskNumber,
+        IReadOnlyList<IsoEntry> isos,
+        CancellationToken cancellationToken) =>
+        BuildAsync(diskNumber, isos, progress: null, cancellationToken);
+
     /// <summary>Wipes the drive, installs the multiboot bootloader, then adds every ISO to the boot menu in order.</summary>
-    public async Task BuildAsync(int diskNumber, IReadOnlyList<IsoEntry> isos, CancellationToken cancellationToken = default)
+    public async Task BuildAsync(
+        int diskNumber,
+        IReadOnlyList<IsoEntry> isos,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         if (isos.Count == 0)
         {
@@ -52,15 +62,23 @@ public sealed class UsbBuilder
             }
         }
 
+        _log.Info($"Starting multiboot build for disk {diskNumber} with {isos.Count} ISO(s).");
+        progress?.Report(0.05);
         var driveLetter = await _diskService.WipeAndPrepareAsync(diskNumber, cancellationToken);
+        progress?.Report(0.25);
         await _syslinuxInstaller.InstallAsync(driveLetter, diskNumber, cancellationToken);
+        progress?.Report(0.45);
 
-        foreach (var iso in isos)
+        for (var index = 0; index < isos.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var iso = isos[index];
+            _log.Info($"Processing ISO {index + 1} of {isos.Count}: '{iso.DisplayName}'.");
             await _isoTemplateEngine.AddIsoAsync(iso, driveLetter, cancellationToken);
+            progress?.Report(0.45 + 0.5 * (index + 1) / isos.Count);
         }
 
+        progress?.Report(1);
         _log.Info("USB drive is ready.");
     }
 
