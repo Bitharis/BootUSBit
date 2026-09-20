@@ -30,8 +30,6 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" MinHeight="0" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="110" />
             <RowDefinition Height="62" />
         </Grid.RowDefinitions>
 
@@ -154,35 +152,7 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="3" Background="{StaticResource PanelRaisedBrush}" CornerRadius="8"
-                Padding="16" Margin="28,18,28,12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" FontSize="14" />
-                    <ProgressBar Height="6" Margin="0,9,0,0" Minimum="0" Maximum="100"
-                                 Value="{Binding BuildProgress, Mode=OneWay}"
-                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}" />
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding StatusIndicator}" Foreground="{StaticResource AccentBrush}"
-                           FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="4" Background="#0D0F13" BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1" CornerRadius="8" Padding="12" Margin="28,0,28,0">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="ACTIVITY" Foreground="{StaticResource MutedTextBrush}"
-                           FontSize="11" FontWeight="Bold" Margin="0,0,0,7" />
-                <ListBox ItemsSource="{Binding LogLines}" FontFamily="Cascadia Mono" FontSize="11"
-                         Background="Transparent" BorderThickness="0" Foreground="#B8C0CC" />
-            </DockPanel>
-        </Border>
-
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
                 Margin="28,0,28,0">
             <Button Content="Cancel" Style="{StaticResource DangerButton}" Width="100" Margin="0,0,10,0"
                     Command="{Binding CancelBuildCommand}" IsEnabled="{Binding IsBusy}" />
