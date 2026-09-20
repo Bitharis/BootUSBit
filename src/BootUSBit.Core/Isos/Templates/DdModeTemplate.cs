@@ -20,7 +20,7 @@ public static class DdModeTemplate
         await using var source = File.OpenRead(isoPath);
         using var handle = CreateFile(
             physicalDrivePath,
-            GenericWrite,
+            GenericRead | GenericWrite,
             FileShare.ReadWrite,
             IntPtr.Zero,
             FileMode.Open,
@@ -34,7 +34,7 @@ public static class DdModeTemplate
                 $"Could not open {physicalDrivePath} for raw image writing: {new Win32Exception(error).Message} (Win32 error {error}).");
         }
 
-        using var dest = new FileStream(handle, FileAccess.Write, 4 * 1024 * 1024, isAsync: false);
+        using var dest = new FileStream(handle, FileAccess.ReadWrite, 4 * 1024 * 1024, isAsync: false);
 
         var buffer = new byte[4 * 1024 * 1024];
         long totalWritten = 0;
@@ -50,6 +50,7 @@ public static class DdModeTemplate
         dest.Flush(flushToDisk: true);
     }
 
+    private const uint GenericRead = 0x80000000;
     private const uint GenericWrite = 0x40000000;
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
